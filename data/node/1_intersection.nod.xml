@@ -1,0 +1,9 @@
+<nodes>
+    <!-- Endpoints (100m from center) -->
+    <node id="north" x="0" y="100" type="priority"/>
+    <node id="south" x="0" y="-100" type="priority"/>
+    <node id="east" x="100" y="0" type="priority"/>
+    <node id="west" x="-100" y="0" type="priority"/>
+    <!-- Center (intersection with traffic light) -->
+    <node id="center" x="0" y="0" type="traffic_light"/>
+</nodes>

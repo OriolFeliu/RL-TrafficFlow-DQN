@@ -1,0 +1,14 @@
+<edges>
+    <!-- North-South Road (2-way) -->
+    <edge id="north_to_center" from="north" to="center" numLanes="1" speed="13.89"/>
+    <edge id="center_to_south" from="center" to="south" numLanes="1" speed="13.89"/>
+    <!-- South-North Road (2-way) -->
+    <edge id="south_to_center" from="south" to="center" numLanes="1" speed="13.89"/>
+    <edge id="center_to_north" from="center" to="north" numLanes="1" speed="13.89"/>
+    <!-- East-West Road (2-way) -->
+    <edge id="east_to_center" from="east" to="center" numLanes="1" speed="13.89"/>
+    <edge id="center_to_west" from="center" to="west" numLanes="1" speed="13.89"/>
+    <!-- West-East Road (2-way) -->
+    <edge id="west_to_center" from="west" to="center" numLanes="1" speed="13.89"/>
+    <edge id="center_to_east" from="center" to="east" numLanes="1" speed="13.89"/>
+</edges>

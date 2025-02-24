@@ -1,0 +1,12 @@
+<routes>
+    <!-- Define the vehicle type -->
+    <vType id="car" accel="0.8" decel="4.5" sigma="0.5" length="5" maxSpeed="13.89"/>
+    
+    <!-- Define routes (paths through the network) -->
+    <route id="route_ns" edges="north_to_center center_to_south"/>
+    <route id="route_ew" edges="east_to_center center_to_west"/>
+    
+    <!-- Add vehicles with unique IDs -->
+    <vehicle id="veh0" depart="0" route="route_ns" type="car"/>
+    <vehicle id="veh1" depart="2" route="route_ew" type="car"/>
+</routes>

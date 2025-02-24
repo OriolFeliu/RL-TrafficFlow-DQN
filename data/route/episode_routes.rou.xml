@@ -1,0 +1,26 @@
+<routes>
+            <vType accel="1.0" decel="4.5" id="standard_car" length="5.0" minGap="2.5" maxSpeed="25" sigma="0.5" />
+
+            <route id="W_N" edges="W2TL TL2N"/>
+            <route id="W_E" edges="W2TL TL2E"/>
+            <route id="W_S" edges="W2TL TL2S"/>
+            <route id="N_W" edges="N2TL TL2W"/>
+            <route id="N_E" edges="N2TL TL2E"/>
+            <route id="N_S" edges="N2TL TL2S"/>
+            <route id="E_W" edges="E2TL TL2W"/>
+            <route id="E_N" edges="E2TL TL2N"/>
+            <route id="E_S" edges="E2TL TL2S"/>
+            <route id="S_W" edges="S2TL TL2W"/>
+            <route id="S_N" edges="S2TL TL2N"/>
+            <route id="S_E" edges="S2TL TL2E"/>
+    <vehicle id="W_E_0" type="standard_car" route="W_E" depart="0" departLane="random" departSpeed="10" />
+    <vehicle id="W_E_1" type="standard_car" route="W_E" depart="7" departLane="random" departSpeed="10" />
+    <vehicle id="N_S_2" type="standard_car" route="N_S" depart="8" departLane="random" departSpeed="10" />
+    <vehicle id="N_S_3" type="standard_car" route="N_S" depart="22" departLane="random" departSpeed="10" />
+    <vehicle id="W_E_4" type="standard_car" route="W_E" depart="39" departLane="random" departSpeed="10" />
+    <vehicle id="N_S_5" type="standard_car" route="N_S" depart="58" departLane="random" departSpeed="10" />
+    <vehicle id="S_E_6" type="standard_car" route="S_E" depart="59" departLane="random" departSpeed="10" />
+    <vehicle id="E_W_7" type="standard_car" route="E_W" depart="61" departLane="random" departSpeed="10" />
+    <vehicle id="S_N_8" type="standard_car" route="S_N" depart="74" departLane="random" departSpeed="10" />
+    <vehicle id="W_E_9" type="standard_car" route="W_E" depart="99" departLane="random" departSpeed="10" />
+</routes>
