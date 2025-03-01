@@ -6,3 +6,6 @@ class BaseAgent():
 
     def act(self, state):
         pass
+
+    def train(self, batch):
+        pass

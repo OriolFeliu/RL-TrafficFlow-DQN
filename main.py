@@ -5,38 +5,61 @@ import random
 import matplotlib.pyplot as plt
 from sumolib import checkBinary
 
-from env import Environment, TrafficGenerator
+from env import Environment
 from dqn_agent import DQNAgent
+from replay_buffer import ReplayBuffer
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     SEED = 1234
     random.seed(SEED)
     np.random.seed(SEED)
     torch.manual_seed(42)
     torch.cuda.manual_seed(42)
 
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    print(f'Device: {device}')
+
     # Hyperparameters
-    EPISODES = 500
+    N_EPISODES = 100
     MAX_STEPS = 1000
     BATCH_SIZE = 64
+    HIDDEN_SIZE = 64
     GAMMA = 0.99
-    EPSILON_START = 1.0
-    EPSILON_MIN = 0.01
-    EPSILON_DECAY = 0.995
-    TARGET_UPDATE = 10
     LR = 1e-3
-    BUFFER_SIZE = 10000
+    TARGET_UPDATE = 10
+    BUFFER_SIZE = 1000
+    N_CARS = 200
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    EPSILON_START = 1.0
+    EPSILON_END = 0.01
+    EPSILON_DECAY = 0.995
 
-    sumoBinary = checkBinary('sumo')
-    sumo_cmd = [sumoBinary, "-c", os.path.join('data', 'cfg', 'sumo_config.sumocfg'), "--no-step-log", "true", "--waiting-time-memory", str(MAX_STEPS)]
-    env = Environment(None, TrafficGenerator, sumo_cmd, MAX_STEPS, 10, 10, 80, 4,)
-    agent = DQNAgent()
+    STATE_SIZE = 4
+    ACTION_SIZE = 4
+
+    GREEN_DURATION = 40
+    YELLOW_DURATION = 5
+
+    # sumoBinary = checkBinary('sumo-gui')
+    # sumo_cmd = [sumoBinary, '-c', os.path.join('data', 'cfg', 'sumo_config.sumocfg'), '--no-step-log', 'true', '--waiting-time-memory', str(MAX_STEPS)]
+    sumoBinary = checkBinary('sumo-gui')
+    sumo_cmd = [
+        sumoBinary,
+        '-c', os.path.join('data', 'cfg', 'sumo_config.sumocfg'),
+        '--no-step-log',
+        '--waiting-time-memory', str(MAX_STEPS)
+    ]
+
+    env = Environment(sumo_cmd, MAX_STEPS, N_CARS,
+                      GREEN_DURATION, YELLOW_DURATION, 80, 4,)
+    agent = DQNAgent(STATE_SIZE, ACTION_SIZE, EPSILON_START,
+                     EPSILON_END, EPSILON_DECAY, HIDDEN_SIZE, LR, GAMMA, device)
+    replay_buffer = ReplayBuffer(BUFFER_SIZE)
 
     total_rewards = []
+    losses = []
 
-    for episode in range(EPISODES):
+    for episode in range(N_EPISODES):
         state = env.reset()
         episode_reward = 0
         done = False
@@ -47,10 +70,13 @@ if __name__ == "__main__":
             next_state, reward, done = env.step(action)
 
             # Store experience
-            agent.buffer.push(state, action, reward, next_state, done)
+            replay_buffer.push(state, action, reward, next_state, done)
 
             # Train agent
-            agent.train()
+            if replay_buffer.size() > BATCH_SIZE:
+                sample = replay_buffer.sample(BATCH_SIZE)
+                loss = agent.train(sample)
+                losses.append(loss)
 
             # Update state and reward
             state = next_state
@@ -62,19 +88,28 @@ if __name__ == "__main__":
 
         # Update target network
         if episode % TARGET_UPDATE == 0:
-            agent.target_net.load_state_dict(agent.policy_net.state_dict())
+            agent.update_target_model()
 
         # Logging
         avg_reward = np.mean(total_rewards[-100:])
         print(
-            f"Episode: {episode+1}, Reward: {episode_reward}, Avg Reward: {avg_reward:.2f}, Epsilon: {agent.epsilon:.2f}"
+            f'Episode: {episode+1}, Reward: {episode_reward}, Avg Reward: {avg_reward:.2f}, Arrived vehicles: {env.total_arrived_vehicles}, Epsilon: {agent.epsilon:.2f}'
         )
 
     # Save model and plot results
-    torch.save(agent.policy_net.state_dict(), "dqn_model.pth")
-    plt.plot(total_rewards)
-    plt.xlabel("Episode")
-    plt.ylabel("Reward")
-    plt.title("Training Progress")
+    torch.save(agent.model.state_dict(), 'dqn_model.pth')
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(losses, label='Loss')
+    plt.xlabel('Training Steps')
+    plt.ylabel('Loss')
+    plt.title('DQN Training Loss')
+    plt.legend()
     plt.show()
-    env.close()
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(total_rewards)
+    plt.xlabel('Episode')
+    plt.ylabel('Reward')
+    plt.title('Training Progress')
+    plt.show()
