@@ -13,14 +13,19 @@ if __name__ == '__main__':
     SEED = 1234
     random.seed(SEED)
     np.random.seed(SEED)
-    torch.manual_seed(42)
-    torch.cuda.manual_seed(42)
+    torch.manual_seed(SEED)
+    torch.cuda.manual_seed(SEED)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f'Device: {device}')
 
-    MAX_STEPS = 10000
+    # Hyperparameters
+    MAX_STEPS = 5400
     N_CARS = 200
+
+    STATE_SIZE = 4
+    ACTION_SIZE = 4
+
     GREEN_DURATION = 40
     YELLOW_DURATION = 5
 
@@ -32,28 +37,29 @@ if __name__ == '__main__':
         '--waiting-time-memory', str(MAX_STEPS)
     ]
 
-    env = Environment(sumo_cmd,
-                      MAX_STEPS, N_CARS, GREEN_DURATION, YELLOW_DURATION)
-    env.reset()
+    env = Environment(sumo_cmd, MAX_STEPS, N_CARS,
+                      GREEN_DURATION, YELLOW_DURATION)
+    agent = DQNAgent(STATE_SIZE, ACTION_SIZE)
+    agent.model.load_state_dict('dqn_model.pth')
 
     total_rewards = []
+
+    state = env.reset()
+    episode_reward = 0
     done = False
 
     while not done:
         # Get action and step environment
-        next_state, reward, done = env.step(None)
+        action = agent.act(state)
+        next_state, reward, done = env.step(action)
 
         # Update state and reward
         state = next_state
         total_rewards.append(reward)
 
-    print(f'Average reward: {np.mean(total_rewards)}')
-    print(f'Total steps: {env.current_step}')
-    print(f'Total arrived vehicles: {env.total_arrived_vehicles}')
+    total_rewards.append(episode_reward)
 
-    # Plot results
-    plt.plot(total_rewards)
-    plt.xlabel('Episode')
-    plt.ylabel('Reward')
-    plt.title('Cyclic simulation')
-    plt.show()
+    # Logging
+    avg_reward = np.mean(total_rewards)
+    print(
+        f'Avg Reward: {avg_reward:.2f}, Arrived vehicles: {env.total_arrived_vehicles}, Time: {env.current_step} s.')

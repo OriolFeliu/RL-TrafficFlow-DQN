@@ -9,13 +9,14 @@ import torch.nn as nn
 
 
 class DQNAgent(BaseAgent):
-    def __init__(self,  state_size, action_size, epsilon_start, epsilon_end, epsilon_decay, hidden_size, lr, gamma, device):
+    def __init__(self,  state_size, action_size, epsilon_start=1.0, epsilon_end=0.01, epsilon_decay=0.995, hidden_size=64, lr=1e-3, gamma=0.9):
         super().__init__()
 
         self.state_size = state_size
         self.action_size = action_size
         self.gamma = gamma
-        self.device = device
+        self.device = torch.device(
+            'cuda' if torch.cuda.is_available() else 'cpu')
 
         # Exploration parameters
         self.epsilon = epsilon_start
@@ -73,3 +74,9 @@ class DQNAgent(BaseAgent):
     def update_epsilon(self):
         if self.epsilon > self.epsilon_end:
             self.epsilon *= self.epsilon_decay
+
+    def load_model(self, path):
+        self.model.load_state_dict(torch.load(path))
+
+    def save_model(self, path):
+        torch.save(self.model.state_dict(), path)

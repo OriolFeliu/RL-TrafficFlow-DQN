@@ -18,21 +18,24 @@ PHASE_EWL_YELLOW = 7
 
 
 class Environment:
-    def __init__(self, sumo_cmd, max_steps, n_cars, green_duration, yellow_duration, num_states, num_actions):
+    def __init__(self, sumo_cmd, max_steps, n_cars, green_duration, yellow_duration):
         self.n_cars = n_cars
         self._step = 0
         self._sumo_cmd = sumo_cmd
         self.max_steps = max_steps
         self._green_duration = green_duration
         self._yellow_duration = yellow_duration
-        self._num_states = num_states
-        self._num_actions = num_actions
         self._reward_episode = []
         self._queue_length_episode = []
 
         self.done = False
         self.current_step = 0
         self.total_arrived_vehicles = 0
+
+        self.current_phase = None
+        self.steps_in_current_phase = 0
+        self.min_green_steps = 20
+        self.yellow_duration = 6
 
     def reset(self):
         self.done = False
@@ -43,30 +46,56 @@ class Environment:
         traci.start(self._sumo_cmd)
 
         state = self.get_queue_length_state()
+
+        self.current_phase = None
+        self.steps_in_current_phase = 0
+
         return state
 
     def step(self, action):
-        # Process action and modify traffic light state
-        # traci.trafficlight.setPhase("junctionID", action)
-        if action == 0:
-            traci.trafficlight.setPhase("TL", PHASE_NS_GREEN)
-        elif action == 1:
-            traci.trafficlight.setPhase("TL", PHASE_NSL_GREEN)
-        elif action == 2:
-            traci.trafficlight.setPhase("TL", PHASE_EW_GREEN)
-        elif action == 3:
-            traci.trafficlight.setPhase("TL", PHASE_EWL_GREEN)
+        # Assume these variables are maintained in your env:
+        # self.current_phase: the last chosen action (phase)
+        # self.steps_in_current_phase: counter for how many steps current phase has been held
+        # self.min_green_steps: minimum steps to hold a green phase before switching
+        # self.yellow_duration: how many steps to hold the yellow phase
+        # Also assume you have helper functions to map an action to the corresponding green and yellow phases:
+        #   get_green_phase(action) and get_yellow_phase(current_green)
 
-        # Do a step in the simulation what will reflect the previous action
+        # Check if the desired action is different from the current phase
+        if action != self.current_phase:
+            # Only allow a phase change if the current green phase has been active long enough
+            if self.steps_in_current_phase >= self.min_green_steps:
+                # Insert yellow phase for safe transition
+                yellow_phase = self.get_yellow_phase(self.current_phase)
+                traci.trafficlight.setPhase("TL", yellow_phase)
+                # Hold yellow phase for a fixed number of steps
+                for _ in range(self.yellow_duration):
+                    traci.simulationStep()
+
+                # Now switch to the new green phase
+                new_green = self.get_green_phase(action)
+                traci.trafficlight.setPhase("TL", new_green)
+
+                # Update current phase and reset the counter
+                self.current_phase = action
+                self.steps_in_current_phase = 0
+            else:
+                # Not enough time has passed; ignore the action and continue
+                pass
+        else:
+            # Same action as before, so just continue and increment the duration counter
+            self.steps_in_current_phase += 1
+
+        # Advance the simulation by one step (this step reflects the updated traffic light state)
         traci.simulationStep()
 
+        # Get the new state and reward
         next_state = self.get_queue_length_state()
         reward = self.get_queue_length_reward()
 
         self.current_step += 1
         self.total_arrived_vehicles += traci.simulation.getArrivedNumber()
 
-        # End simulation if maximum steps reached or all cars have exit the simulation
         done = (self.current_step >= self.max_steps) or (
             self.total_arrived_vehicles >= self.n_cars)
         if done:
