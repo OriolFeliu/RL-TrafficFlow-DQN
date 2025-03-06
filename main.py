@@ -13,26 +13,26 @@ if __name__ == '__main__':
     SEED = 1234
     random.seed(SEED)
     np.random.seed(SEED)
-    torch.manual_seed(42)
-    torch.cuda.manual_seed(42)
+    torch.manual_seed(SEED)
+    torch.cuda.manual_seed(SEED)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f'Device: {device}')
 
     # Hyperparameters
-    N_EPISODES = 100
-    MAX_STEPS = 1000
+    N_EPISODES = 200
+    MAX_STEPS = 5400
     BATCH_SIZE = 64
     HIDDEN_SIZE = 64
-    GAMMA = 0.99
+    GAMMA = 0.8
     LR = 1e-3
     TARGET_UPDATE = 10
-    BUFFER_SIZE = 1000
+    BUFFER_SIZE = 2000
     N_CARS = 200
 
     EPSILON_START = 1.0
     EPSILON_END = 0.01
-    EPSILON_DECAY = 0.995
+    EPSILON_DECAY = 0.99
 
     STATE_SIZE = 4
     ACTION_SIZE = 4
@@ -40,9 +40,7 @@ if __name__ == '__main__':
     GREEN_DURATION = 40
     YELLOW_DURATION = 5
 
-    # sumoBinary = checkBinary('sumo-gui')
-    # sumo_cmd = [sumoBinary, '-c', os.path.join('data', 'cfg', 'sumo_config.sumocfg'), '--no-step-log', 'true', '--waiting-time-memory', str(MAX_STEPS)]
-    sumoBinary = checkBinary('sumo-gui')
+    sumoBinary = checkBinary('sumo')
     sumo_cmd = [
         sumoBinary,
         '-c', os.path.join('data', 'cfg', 'sumo_config.sumocfg'),
@@ -51,9 +49,9 @@ if __name__ == '__main__':
     ]
 
     env = Environment(sumo_cmd, MAX_STEPS, N_CARS,
-                      GREEN_DURATION, YELLOW_DURATION, 80, 4,)
+                      GREEN_DURATION, YELLOW_DURATION)
     agent = DQNAgent(STATE_SIZE, ACTION_SIZE, EPSILON_START,
-                     EPSILON_END, EPSILON_DECAY, HIDDEN_SIZE, LR, GAMMA, device)
+                     EPSILON_END, EPSILON_DECAY, HIDDEN_SIZE, LR, GAMMA)
     replay_buffer = ReplayBuffer(BUFFER_SIZE)
 
     total_rewards = []
