@@ -32,13 +32,13 @@ if __name__ == '__main__':
 
     EPSILON_START = 1.0
     EPSILON_END = 0.01
-    EPSILON_DECAY = 0.99
+    EPSILON_DECAY = 0.995
 
-    STATE_SIZE = 4
+    STATE_SIZE = 16
     ACTION_SIZE = 4
 
-    GREEN_DURATION = 40
-    YELLOW_DURATION = 5
+    GREEN_DURATION = 10
+    YELLOW_DURATION = 2
 
     sumoBinary = checkBinary('sumo')
     sumo_cmd = [
@@ -55,12 +55,13 @@ if __name__ == '__main__':
     replay_buffer = ReplayBuffer(BUFFER_SIZE)
 
     total_rewards = []
-    losses = []
+    total_losses = []
 
     for episode in range(N_EPISODES):
         state = env.reset()
         episode_reward = 0
         done = False
+        episode_losses = []
 
         while not done:
             # Get action and step environment
@@ -74,7 +75,7 @@ if __name__ == '__main__':
             if replay_buffer.size() > BATCH_SIZE:
                 sample = replay_buffer.sample(BATCH_SIZE)
                 loss = agent.train(sample)
-                losses.append(loss)
+                episode_losses.append(loss)
 
             # Update state and reward
             state = next_state
@@ -83,6 +84,7 @@ if __name__ == '__main__':
         # Post-episode updates
         agent.update_epsilon()
         total_rewards.append(episode_reward)
+        total_losses.append(np.average(episode_losses))
 
         # Update target network
         if episode % TARGET_UPDATE == 0:
@@ -95,10 +97,10 @@ if __name__ == '__main__':
         )
 
     # Save model and plot results
-    torch.save(agent.model.state_dict(), 'dqn_model.pth')
+    torch.save(agent.model.state_dict(), f'dqn_{N_EPISODES}_model.pth')
 
     plt.figure(figsize=(10, 6))
-    plt.plot(losses, label='Loss')
+    plt.plot(total_losses, label='Loss')
     plt.xlabel('Training Steps')
     plt.ylabel('Loss')
     plt.title('DQN Training Loss')

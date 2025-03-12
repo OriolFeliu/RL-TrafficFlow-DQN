@@ -20,13 +20,10 @@ PHASE_EWL_YELLOW = 7
 class Environment:
     def __init__(self, sumo_cmd, max_steps, n_cars, green_duration, yellow_duration):
         self.n_cars = n_cars
-        self._step = 0
-        self._sumo_cmd = sumo_cmd
+        self.sumo_cmd = sumo_cmd
         self.max_steps = max_steps
-        self._green_duration = green_duration
-        self._yellow_duration = yellow_duration
-        self._reward_episode = []
-        self._queue_length_episode = []
+        # self._reward_episode = []
+        # self._queue_length_episode = []
 
         self.done = False
         self.current_step = 0
@@ -34,16 +31,24 @@ class Environment:
 
         self.current_phase = None
         self.steps_in_current_phase = 0
-        self.min_green_steps = 20
-        self.yellow_duration = 6
+        self.green_duration = green_duration
+        self.yellow_duration = yellow_duration
+        self.old_action = -1
 
     def reset(self):
         self.done = False
         self.current_step = 0
         self.total_arrived_vehicles = 0
+        self.old_action = -1
 
         self.generate_routefile()
-        traci.start(self._sumo_cmd)
+        traci.start(self.sumo_cmd)
+
+        all_lanes = traci.lane.getIDList()
+        # Filter lanes starting with 'TL' (outgoing from the junction)
+        # ['E2TL_0', 'E2TL_1', 'E2TL_2', 'E2TL_3', 'N2TL_0', 'N2TL_1', 'N2TL_2', 'N2TL_3', 'S2TL_0', 'S2TL_1', 'S2TL_2', 'S2TL_3', 'W2TL_0', 'W2TL_1', 'W2TL_2', 'W2TL_3']
+        self.incoming_lanes = [lane for lane in all_lanes
+                               if not lane.startswith(':TL') and not lane.startswith('TL')]
 
         state = self.get_queue_length_state()
 
@@ -53,74 +58,119 @@ class Environment:
         return state
 
     def step(self, action):
-        # Assume these variables are maintained in your env:
-        # self.current_phase: the last chosen action (phase)
-        # self.steps_in_current_phase: counter for how many steps current phase has been held
-        # self.min_green_steps: minimum steps to hold a green phase before switching
-        # self.yellow_duration: how many steps to hold the yellow phase
-        # Also assume you have helper functions to map an action to the corresponding green and yellow phases:
-        #   get_green_phase(action) and get_yellow_phase(current_green)
+        if self.current_step != 0 and self.old_action != action:
+            self.set_yellow_phase()
+            self.done = self.run_simulation_steps(self.yellow_duration)
 
-        # Check if the desired action is different from the current phase
-        if action != self.current_phase:
-            # Only allow a phase change if the current green phase has been active long enough
-            if self.steps_in_current_phase >= self.min_green_steps:
-                # Insert yellow phase for safe transition
-                yellow_phase = self.get_yellow_phase(self.current_phase)
-                traci.trafficlight.setPhase("TL", yellow_phase)
-                # Hold yellow phase for a fixed number of steps
-                for _ in range(self.yellow_duration):
-                    traci.simulationStep()
+        self.old_action = action
 
-                # Now switch to the new green phase
-                new_green = self.get_green_phase(action)
-                traci.trafficlight.setPhase("TL", new_green)
+        if not self.done:
+            self.set_green_phase(action)
+            self.done = self.run_simulation_steps(self.green_duration)
 
-                # Update current phase and reset the counter
-                self.current_phase = action
-                self.steps_in_current_phase = 0
-            else:
-                # Not enough time has passed; ignore the action and continue
-                pass
-        else:
-            # Same action as before, so just continue and increment the duration counter
-            self.steps_in_current_phase += 1
-
-        # Advance the simulation by one step (this step reflects the updated traffic light state)
-        traci.simulationStep()
-
-        # Get the new state and reward
         next_state = self.get_queue_length_state()
         reward = self.get_queue_length_reward()
 
-        self.current_step += 1
-        self.total_arrived_vehicles += traci.simulation.getArrivedNumber()
-
-        done = (self.current_step >= self.max_steps) or (
-            self.total_arrived_vehicles >= self.n_cars)
-        if done:
+        if self.done:
             traci.close()
 
-        return next_state, reward, done
+        # # Advance the simulation by one step (this step reflects the updated traffic light state)
+        # traci.simulationStep()
+
+        # # Get the new state and reward
+        # next_state = self.get_queue_length_state()
+        # reward = self.get_queue_length_reward()
+
+        # self.current_step += 1
+        # self.total_arrived_vehicles += traci.simulation.getArrivedNumber()
+
+        # done = (self.current_step >= self.max_steps) or (
+        #     self.total_arrived_vehicles >= self.n_cars)
+        # if done:
+        #     traci.close()
+
+        return next_state, reward, self.done
 
     # TODO use next state to calculate this without repeating code
     def get_queue_length_reward(self):
-        halt_N = traci.edge.getLastStepHaltingNumber("N2TL")
-        halt_S = traci.edge.getLastStepHaltingNumber("S2TL")
-        halt_E = traci.edge.getLastStepHaltingNumber("E2TL")
-        halt_W = traci.edge.getLastStepHaltingNumber("W2TL")
+        halt_N = traci.edge.getLastStepHaltingNumber('N2TL')
+        halt_S = traci.edge.getLastStepHaltingNumber('S2TL')
+        halt_E = traci.edge.getLastStepHaltingNumber('E2TL')
+        halt_W = traci.edge.getLastStepHaltingNumber('W2TL')
 
         queue_length = halt_N + halt_S + halt_E + halt_W
 
         return -queue_length
 
     def get_queue_length_state(self):
-        halt_N = traci.edge.getLastStepHaltingNumber("N2TL")
-        halt_S = traci.edge.getLastStepHaltingNumber("S2TL")
-        halt_E = traci.edge.getLastStepHaltingNumber("E2TL")
-        halt_W = traci.edge.getLastStepHaltingNumber("W2TL")
+        # halt_N = traci.edge.getLastStepHaltingNumber('N2TL')
+        # halt_S = traci.edge.getLastStepHaltingNumber('S2TL')
+        # halt_E = traci.edge.getLastStepHaltingNumber('E2TL')
+        # halt_W = traci.edge.getLastStepHaltingNumber('W2TL')
 
-        return np.array([halt_N, halt_S, halt_E, halt_W,])
+        # return np.array([halt_N, halt_S, halt_E, halt_W,])
+
+        # Option 1
+        # Get all edge IDs in the network
+        # all_edges = traci.edge.getIDList()
+
+        # # Filter edges starting with 'TL2' (outgoing from the junction)
+        # incoming_edges = [edge for edge in all_edges
+        #                   if not edge.startswith(':TL') and not edge.startswith('TL')]
+
+        # n_incoming_edges = len(incoming_edges)
+        # n_lanes = traci.edge.getLaneNumber('W2TL')
+        # halting_vehicles = np.zeros((n_incoming_edges, n_lanes))
+
+        # for i in range(n_incoming_edges):
+        #     for j in range(n_lanes):
+        #         incoming_edge_lane = incoming_edges[i] +'_'+ str(j)
+        #         halting_vehicles[i, j] = traci.lane.getLastStepHaltingNumber(incoming_edge_lane)
+
+        # return halting_vehicles
+
+        # Option 2
+
+        halting_vehicles = np.zeros(len(self.incoming_lanes))
+        for i, lane_id in enumerate(self.incoming_lanes):
+            halting_vehicles[i] = traci.lane.getLastStepHaltingNumber(lane_id)
+
+        return halting_vehicles
+
+    def set_green_phase(self, action):
+        if action == 0:
+            traci.trafficlight.setPhase("TL", PHASE_NS_GREEN)
+        elif action == 1:
+            traci.trafficlight.setPhase("TL", PHASE_NSL_GREEN)
+        elif action == 2:
+            traci.trafficlight.setPhase("TL", PHASE_EW_GREEN)
+        elif action == 3:
+            traci.trafficlight.setPhase("TL", PHASE_EWL_GREEN)
+
+    def set_yellow_phase(self):
+        if self.old_action == 0:
+            traci.trafficlight.setPhase("TL", PHASE_NS_YELLOW)
+        elif self.old_action == 1:
+            traci.trafficlight.setPhase("TL", PHASE_NSL_YELLOW)
+        elif self.old_action == 2:
+            traci.trafficlight.setPhase("TL", PHASE_EW_YELLOW)
+        elif self.old_action == 3:
+            traci.trafficlight.setPhase("TL", PHASE_EWL_YELLOW)
+
+    def run_simulation_steps(self, n_steps):
+        while n_steps > 0:
+            traci.simulationStep()
+            self.total_arrived_vehicles += traci.simulation.getArrivedNumber()
+            self.current_step += 1
+
+            if (self.current_step >= self.max_steps) or (self.total_arrived_vehicles >= self.n_cars):
+                return True
+
+            n_steps -= 1
+
+        return False
+
+        # TODO calculate reward while waiting for green
 
     def generate_routefile(self):
         shape_param = 2
@@ -146,8 +196,8 @@ class Environment:
         car_gen_steps = np.floor(car_gen_steps).astype(int)
 
         # Clip to ensure values stay within [0, max_steps-1]
-        car_gen_steps = np.clip(car_gen_steps, 0, self.max_steps-1)
-        # car_gen_steps = np.clip(car_gen_steps, 0, self.max_steps*0.75)
+        # car_gen_steps = np.clip(car_gen_steps, 0, self.max_steps-1)
+        car_gen_steps = np.clip(car_gen_steps, 0, self.max_steps*0.8)
 
         with open("data/route/episode_routes.rou.xml", "w") as routes:
             print("""<routes>

@@ -16,20 +16,20 @@ if __name__ == '__main__':
     torch.manual_seed(SEED)
     torch.cuda.manual_seed(SEED)
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    print(f'Device: {device}')
+    print('INFERENCE SIMULATION')
 
     # Hyperparameters
+    N_EPISODES = 50
     MAX_STEPS = 5400
     N_CARS = 200
 
-    STATE_SIZE = 4
+    STATE_SIZE = 16
     ACTION_SIZE = 4
 
     GREEN_DURATION = 40
     YELLOW_DURATION = 5
 
-    sumoBinary = checkBinary('sumo-gui')
+    sumoBinary = checkBinary('sumo')
     sumo_cmd = [
         sumoBinary,
         '-c', os.path.join('data', 'cfg', 'sumo_config.sumocfg'),
@@ -40,26 +40,35 @@ if __name__ == '__main__':
     env = Environment(sumo_cmd, MAX_STEPS, N_CARS,
                       GREEN_DURATION, YELLOW_DURATION)
     agent = DQNAgent(STATE_SIZE, ACTION_SIZE)
-    agent.model.load_state_dict('dqn_model.pth')
+
+    model_path = f'dqn_{N_EPISODES}_model.pth'
+    agent.load_model(model_path)
 
     total_rewards = []
 
     state = env.reset()
-    episode_reward = 0
     done = False
 
     while not done:
         # Get action and step environment
         action = agent.act(state)
+
         next_state, reward, done = env.step(action)
 
         # Update state and reward
         state = next_state
         total_rewards.append(reward)
 
-    total_rewards.append(episode_reward)
 
     # Logging
     avg_reward = np.mean(total_rewards)
-    print(
-        f'Avg Reward: {avg_reward:.2f}, Arrived vehicles: {env.total_arrived_vehicles}, Time: {env.current_step} s.')
+    print(f'Average reward: {np.mean(total_rewards)}')
+    print(f'Total steps: {env.current_step}')
+    print(f'Total arrived vehicles: {env.total_arrived_vehicles}')
+
+    # Plot results
+    plt.plot(total_rewards)
+    plt.xlabel('Step')
+    plt.ylabel('Reward')
+    plt.title('Trained DQN simulation')
+    plt.show()

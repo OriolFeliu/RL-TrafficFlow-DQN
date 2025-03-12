@@ -16,15 +16,14 @@ if __name__ == '__main__':
     torch.manual_seed(42)
     torch.cuda.manual_seed(42)
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    print(f'Device: {device}')
+    print('CYCLIC SIMULATION')
 
-    MAX_STEPS = 10000
+    MAX_STEPS = 5400
     N_CARS = 200
     GREEN_DURATION = 40
     YELLOW_DURATION = 5
 
-    sumoBinary = checkBinary('sumo-gui')
+    sumoBinary = checkBinary('sumo')
     sumo_cmd = [
         sumoBinary,
         '-c', os.path.join('data', 'cfg', 'sumo_config.sumocfg'),
@@ -53,7 +52,7 @@ if __name__ == '__main__':
 
     # Plot results
     plt.plot(total_rewards)
-    plt.xlabel('Episode')
+    plt.xlabel('Step')
     plt.ylabel('Reward')
     plt.title('Cyclic simulation')
     plt.show()
