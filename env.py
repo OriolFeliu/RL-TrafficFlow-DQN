@@ -69,25 +69,10 @@ class Environment:
             self.done = self.run_simulation_steps(self.green_duration)
 
         next_state = self.get_queue_length_state()
-        reward = self.get_queue_length_reward()
+        reward = self.get_queue_waiting_time_reward()
 
         if self.done:
             traci.close()
-
-        # # Advance the simulation by one step (this step reflects the updated traffic light state)
-        # traci.simulationStep()
-
-        # # Get the new state and reward
-        # next_state = self.get_queue_length_state()
-        # reward = self.get_queue_length_reward()
-
-        # self.current_step += 1
-        # self.total_arrived_vehicles += traci.simulation.getArrivedNumber()
-
-        # done = (self.current_step >= self.max_steps) or (
-        #     self.total_arrived_vehicles >= self.n_cars)
-        # if done:
-        #     traci.close()
 
         return next_state, reward, self.done
 
@@ -102,35 +87,21 @@ class Environment:
 
         return -queue_length
 
+    def get_queue_waiting_time_reward(self):
+        total_waiting_time = 0.0
+        for veh_id in traci.vehicle.getIDList():
+            # Check if the vehicle is halted
+            if traci.vehicle.getSpeed(veh_id) < 0.1:
+                total_waiting_time += traci.vehicle.getWaitingTime(veh_id)
+
+        return -total_waiting_time
+    
+    def get_queue_length_waiting_time_reward(self):
+        reward = self.get_queue_length_reward() * self.get_queue_waiting_time_reward() # can use exp to emphasize time
+
+        return -reward
+
     def get_queue_length_state(self):
-        # halt_N = traci.edge.getLastStepHaltingNumber('N2TL')
-        # halt_S = traci.edge.getLastStepHaltingNumber('S2TL')
-        # halt_E = traci.edge.getLastStepHaltingNumber('E2TL')
-        # halt_W = traci.edge.getLastStepHaltingNumber('W2TL')
-
-        # return np.array([halt_N, halt_S, halt_E, halt_W,])
-
-        # Option 1
-        # Get all edge IDs in the network
-        # all_edges = traci.edge.getIDList()
-
-        # # Filter edges starting with 'TL2' (outgoing from the junction)
-        # incoming_edges = [edge for edge in all_edges
-        #                   if not edge.startswith(':TL') and not edge.startswith('TL')]
-
-        # n_incoming_edges = len(incoming_edges)
-        # n_lanes = traci.edge.getLaneNumber('W2TL')
-        # halting_vehicles = np.zeros((n_incoming_edges, n_lanes))
-
-        # for i in range(n_incoming_edges):
-        #     for j in range(n_lanes):
-        #         incoming_edge_lane = incoming_edges[i] +'_'+ str(j)
-        #         halting_vehicles[i, j] = traci.lane.getLastStepHaltingNumber(incoming_edge_lane)
-
-        # return halting_vehicles
-
-        # Option 2
-
         halting_vehicles = np.zeros(len(self.incoming_lanes))
         for i, lane_id in enumerate(self.incoming_lanes):
             halting_vehicles[i] = traci.lane.getLastStepHaltingNumber(lane_id)

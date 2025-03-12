@@ -83,7 +83,7 @@ if __name__ == '__main__':
 
         # Post-episode updates
         agent.update_epsilon()
-        total_rewards.append(episode_reward)
+        total_rewards.append(np.average(episode_reward))
         total_losses.append(np.average(episode_losses))
 
         # Update target network
