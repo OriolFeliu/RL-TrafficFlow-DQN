@@ -35,7 +35,8 @@ if __name__ == '__main__':
                       MAX_STEPS, N_CARS, GREEN_DURATION, YELLOW_DURATION)
     env.reset()
 
-    total_rewards = []
+    total_queue_lengths = []
+    total_queue_times = []
     done = False
 
     while not done:
@@ -44,15 +45,35 @@ if __name__ == '__main__':
 
         # Update state and reward
         state = next_state
-        total_rewards.append(reward)
 
-    print(f'Average reward: {np.mean(total_rewards)}')
+        if not done:
+            total_queue_lengths.append(env.get_queue_length_reward())
+            total_queue_times.append(env.get_queue_waiting_time_reward())
+
+    # Logging
+    avg_queue_length = np.mean(total_queue_lengths)
+    avg_queue_time = np.mean(total_queue_times)
+    print(f'Average queue length: {avg_queue_length}')
+    print(f'Average queue time: {avg_queue_time}')
     print(f'Total steps: {env.current_step}')
     print(f'Total arrived vehicles: {env.total_arrived_vehicles}')
 
-    # Plot results
-    plt.plot(total_rewards)
-    plt.xlabel('Step')
-    plt.ylabel('Reward')
-    plt.title('Cyclic simulation')
+    fig, ax1 = plt.subplots()
+
+    # Plot total_queue_lengths on the primary y-axis
+    ax1.plot(total_queue_lengths, label='Queue Length', color='blue')
+    ax1.set_xlabel('Step')
+    ax1.set_ylabel('Queue Length', color='blue')
+    ax1.tick_params(axis='y', labelcolor='blue')
+
+    # Create a secondary y-axis for total_queue_times
+    ax2 = ax1.twinx()
+    ax2.plot(total_queue_times, label='Queue Time', color='red')
+    ax2.set_ylabel('Queue Time', color='red')
+    ax2.tick_params(axis='y', labelcolor='red')
+
+    # Title and grid
+    plt.title('Trained DQN Simulation')
+    fig.tight_layout()
+
     plt.show()

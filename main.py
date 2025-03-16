@@ -8,6 +8,7 @@ from sumolib import checkBinary
 from env import Environment
 from dqn_agent import DQNAgent
 from replay_buffer import ReplayBuffer
+from config import TRAINING, ENV
 
 if __name__ == '__main__':
     SEED = 1234
@@ -19,26 +20,28 @@ if __name__ == '__main__':
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f'Device: {device}')
 
-    # Hyperparameters
-    N_EPISODES = 200
-    MAX_STEPS = 5400
-    BATCH_SIZE = 64
-    HIDDEN_SIZE = 64
-    GAMMA = 0.8
-    LR = 1e-3
-    TARGET_UPDATE = 10
-    BUFFER_SIZE = 2000
-    N_CARS = 200
+    # HYPERPARAMETHERS
+    # Training
+    N_EPISODES = TRAINING["n_episodes"]
+    MAX_STEPS = TRAINING["max_steps"]
+    BATCH_SIZE = TRAINING["batch_size"]
+    HIDDEN_SIZE = TRAINING["hidden_size"]
+    GAMMA = TRAINING["gamma"]
+    LR = TRAINING["lr"]
+    TARGET_UPDATE = TRAINING["target_update"]
+    BUFFER_SIZE = TRAINING["buffer_size"]
+    N_CARS = TRAINING["n_cars"]
+    EPSILON_START = TRAINING["epsilon_start"]
+    EPSILON_END = TRAINING["epsilon_end"]
+    EPSILON_DECAY = TRAINING["epsilon_decay"]
 
-    EPSILON_START = 1.0
-    EPSILON_END = 0.01
-    EPSILON_DECAY = 0.995
+    # Environment
+    STATE_SIZE = ENV["state_size"]
+    ACTION_SIZE = ENV["action_size"]
+    GREEN_DURATION = ENV["green_duration"]
+    YELLOW_DURATION = ENV["yellow_duration"]
 
-    STATE_SIZE = 16
-    ACTION_SIZE = 4
-
-    GREEN_DURATION = 10
-    YELLOW_DURATION = 2
+    N_INTERSECTIONS = 1
 
     sumoBinary = checkBinary('sumo')
     sumo_cmd = [

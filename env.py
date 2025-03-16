@@ -69,7 +69,8 @@ class Environment:
             self.done = self.run_simulation_steps(self.green_duration)
 
         next_state = self.get_queue_length_state()
-        reward = self.get_queue_waiting_time_reward()
+        reward = self.get_queue_length_reward()
+        # reward = self.get_queue_waiting_time_reward()
 
         if self.done:
             traci.close()
