@@ -37,3 +37,7 @@ The thesis report is available in the root folder in PDF format. It provides a d
 
 ## Conclusion
 This project demonstrates the potential of reinforcement learning for adaptive traffic light control. The thesis discusses how the agent learns to optimize traffic flow by balancing throughput and minimizing waiting time. With further enhancements, this approach could contribute to smarter urban traffic management systems.
+
+## References
+- This project is based on the original implementation by [Andrea Vidali](https://github.com/AndreaVidali/Deep-QLearning-Agent-for-Traffic-Signal-Control):  
+**Deep Q-Learning Agent for Traffic Signal Control**.
